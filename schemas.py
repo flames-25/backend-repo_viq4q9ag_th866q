@@ -1,48 +1,55 @@
 """
-Database Schemas
+Database Schemas for Smart Waste Finder
 
-Define your MongoDB collection schemas here using Pydantic models.
-These schemas are used for data validation in your application.
-
-Each Pydantic model represents a collection in your database.
-Model name is converted to lowercase for the collection name:
-- User -> "user" collection
-- Product -> "product" collection
-- BlogPost -> "blogs" collection
+Each Pydantic model corresponds to a MongoDB collection (lowercased class name).
+Use these for validation and to keep a consistent shape across the app.
 """
+from typing import Optional, List, Literal
+from pydantic import BaseModel, Field, HttpUrl, EmailStr
 
-from pydantic import BaseModel, Field
-from typing import Optional
-
-# Example schemas (replace with your own):
-
+# User profiles (future use)
 class User(BaseModel):
-    """
-    Users collection schema
-    Collection name: "user" (lowercase of class name)
-    """
     name: str = Field(..., description="Full name")
-    email: str = Field(..., description="Email address")
-    address: str = Field(..., description="Address")
-    age: Optional[int] = Field(None, ge=0, le=120, description="Age in years")
-    is_active: bool = Field(True, description="Whether user is active")
+    email: EmailStr = Field(..., description="Email address")
+    city: Optional[str] = Field(None, description="Home city")
+    is_active: bool = Field(True, description="Account status")
 
-class Product(BaseModel):
+StationType = Literal["dump", "recycling", "ewaste", "compost", "hazmat"]
+
+class Station(BaseModel):
     """
-    Products collection schema
-    Collection name: "product" (lowercase of class name)
+    Waste station locations with geocoordinates and metadata
+    Collection: "station"
     """
-    title: str = Field(..., description="Product title")
-    description: Optional[str] = Field(None, description="Product description")
-    price: float = Field(..., ge=0, description="Price in dollars")
-    category: str = Field(..., description="Product category")
-    in_stock: bool = Field(True, description="Whether product is in stock")
+    name: str = Field(..., description="Station name")
+    type: StationType = Field(..., description="Station category")
+    address: str = Field(..., description="Street address")
+    latitude: float = Field(..., ge=-90, le=90)
+    longitude: float = Field(..., ge=-180, le=180)
+    rating: Optional[float] = Field(None, ge=0, le=5)
+    review_count: Optional[int] = Field(0, ge=0)
+    phone: Optional[str] = None
+    website: Optional[HttpUrl] = None
+    hours: Optional[str] = Field(None, description="Open hours summary")
+    services: Optional[List[str]] = Field(default_factory=list)
 
-# Add your own schemas here:
-# --------------------------------------------------
+class Recommendation(BaseModel):
+    """
+    Recommendation items shown in the drawer
+    Collection: "recommendation"
+    """
+    title: str
+    description: Optional[str] = None
+    image: Optional[HttpUrl] = None
+    station_id: Optional[str] = Field(None, description="Related station id")
+    tags: List[str] = Field(default_factory=list)
 
-# Note: The Flames database viewer will automatically:
-# 1. Read these schemas from GET /schema endpoint
-# 2. Use them for document validation when creating/editing
-# 3. Handle all database operations (CRUD) directly
-# 4. You don't need to create any database endpoints!
+class RecommendationFeedback(BaseModel):
+    """
+    Quick feedback on recommendations (thumbs up/down)
+    Collection: "recommendationfeedback"
+    """
+    item_id: str
+    action: Literal["up", "down"]
+    reason: Optional[str] = None
+    user_id: Optional[str] = None
